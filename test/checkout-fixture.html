@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cyberbiz-like checkout fixture</title>
+    <style>
+      .grid { display: flex; gap: 8px; flex-wrap: wrap; }
+      .grid-button button { padding: 8px 12px; }
+      .grid-button.selected button { outline: 2px solid #2563eb; }
+      #picker { display: none; border: 1px dashed #94a3b8; padding: 8px; margin: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>模擬 Funbox /carts 結帳頁</h1>
+    <form id="checkout">
+      <label>購買人姓名 <input name="order[billing_address_attributes][name]" id="customer_name" placeholder="購買人姓名" /></label>
+      <label>電子郵件 <input type="email" name="customer_email" id="customer_email" /></label>
+      <label>購買人聯絡電話 <input name="order[billing_address_attributes][phone]" id="customer_phone" placeholder="購買人聯絡電話，例：0987654321" /></label>
+      <label>縣市
+        <select name="city" id="city">
+          <option value="">請選擇</option>
+          <option value="臺北市">臺北市</option>
+          <option value="新北市">新北市</option>
+        </select>
+      </label>
+      <div class="el-form-item">
+        <span>備用縣市</span>
+        <div class="el-select" id="city-combo" role="combobox">
+          <input id="city-combo-input" placeholder="請選擇縣市" readonly />
+          <ul id="city-combo-list" hidden>
+            <li role="option">臺北市</li>
+            <li role="option">新北市</li>
+          </ul>
+        </div>
+      </div>
+      <label>區域
+        <select name="district" id="district">
+          <option value="">請選擇</option>
+          <option value="內湖區">內湖區</option>
+          <option value="板橋區">板橋區</option>
+        </select>
+      </label>
+      <label>郵遞區號 <input name="zip" id="zip" /></label>
+      <label>詳細地址 <input name="address" id="address" /></label>
+      <label>備註 <input name="order[note]" id="note" /></label>
+      <fieldset>
+        <legend>付款方式</legend>
+        <label><input type="radio" name="payment" value="credit" /> 信用卡</label>
+        <label><input type="radio" name="payment" value="cod" /> 貨到付款</label>
+      </fieldset>
+      <button type="button" class="tab" id="cvs-shipping-tab">超商</button>
+      <button type="button" class="tab" id="homeDelivery-shipping-tab">宅配</button>
+      <div class="grid" id="shipping-grid">
+        <div class="grid-button active selected" data-rate="seven_prepaid">
+          <button type="button" class="form-control" id="cvs-shipping-button-44434"><span class="title">7-11 取貨(先付款)</span></button>
+        </div>
+        <div class="grid-button" data-rate="seven_cod">
+          <button type="button" class="form-control" id="cvs-shipping-button-44433"><span class="title">7-11 貨到付款</span></button>
+        </div>
+        <div class="grid-button" data-rate="family_prepaid">
+          <button type="button" class="form-control" id="cvs-shipping-button-44435"><span class="title">全家取貨(先付款)</span></button>
+        </div>
+        <div class="grid-button" data-rate="family_cod">
+          <button type="button" class="form-control" id="cvs-shipping-button-44436"><span class="title">全家貨到付款</span></button>
+        </div>
+        <div class="grid-button" data-rate="home">
+          <button type="button" class="form-control" id="homeDelivery-shipping-button-1"><span class="title">一般宅配</span></button>
+        </div>
+      </div>
+      <div id="trap-parent" class="grid-button" hidden>
+        <span class="title">7-11 取貨(先付款) 7-11 貨到付款</span>
+        <button type="button" id="trap-prepaid"><span class="title">7-11 取貨(先付款)</span></button>
+        <button type="button" id="trap-cod"><span class="title">7-11 貨到付款</span></button>
+      </div>
+      <p id="package-copy">PackAge+ 材積計算說明：商品材積與計費方式僅供參考。</p>
+      <input type="hidden" name="order[shipping_rate]" id="shipping_rate" value="seven_prepaid" />
+      <input type="hidden" name="order[shipping_address_attributes][store_name]" id="store_name" value="" />
+      <input type="hidden" name="order[shipping_address_attributes][seven_store_id]" id="seven_store_id" value="" />
+      <input type="hidden" name="order[shipping_address_attributes][family_store_id]" id="family_store_id" value="" />
+      <p id="store-label">已選擇的門市： 請選擇</p>
+      <button type="button" id="confirm-shipping">確認配送方式</button>
+      <ul id="line-items">
+        <li data-handle="ru2512" data-variant="40182631">BRUDER JCB推高機與棧板 ×1</li>
+      </ul>
+      <div class="alert" id="site-alert" hidden>商品總材積超過限制，本次訂單將無法提供超商配送。</div>
+      <input type="button" id="cvs-pick-button" value="選擇取貨門市" />
+      <div id="picker">請在地圖選門市（fixture 不會自動選店）<iframe id="map-iframe" src="about:blank" name="cvs-map" hidden></iframe></div>
+      <button type="submit" id="place-order">立即結帳</button>
+    </form>
+    <pre id="result"></pre>
+    <script src="../src/lib/dom.js"></script>
+    <script src="../src/lib/cart.js"></script>
+    <script src="../src/lib/alerts.js"></script>
+    <script src="../src/lib/fill.js"></script>
+    <script>
+      window.__funboxFixtureReady = true;
+      const submitted = { count: 0 };
+      const pickerOpened = { count: 0 };
+      const confirmed = { count: 0, rateWhenClicked: "" };
+      document.getElementById("checkout").addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitted.count += 1;
+      });
+      document.getElementById("confirm-shipping").addEventListener("click", () => {
+        confirmed.count += 1;
+        confirmed.rateWhenClicked = document.getElementById("shipping_rate").value;
+      });
+      document.querySelectorAll("#shipping-grid .grid-button button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#shipping-grid .grid-button").forEach((el) => {
+            el.classList.remove("selected");
+            el.classList.remove("active");
+          });
+          const wrap = btn.closest(".grid-button");
+          wrap.classList.add("selected");
+          wrap.classList.add("active");
+          document.getElementById("shipping_rate").value = wrap.dataset.rate;
+        });
+      });
+      document.getElementById("cvs-pick-button").addEventListener("click", () => {
+        pickerOpened.count += 1;
+        document.getElementById("picker").style.display = "block";
+        document.getElementById("map-iframe").hidden = false;
+        document.getElementById("map-iframe").name = "ezship-map";
+      });
+      window.showVolumeAlert = function showVolumeAlert() {
+        const el = document.getElementById("site-alert");
+        el.hidden = false;
+      };
+      window.setSavedStore = function setSavedStore(brand, name, id) {
+        document.getElementById("store_name").value = name || "";
+        document.getElementById("seven_store_id").value = brand === "seven" ? id || "" : "";
+        document.getElementById("family_store_id").value = brand === "family" ? id || "" : "";
+        document.getElementById("store-label").textContent = name ? `已選擇的門市： ${name}` : "已選擇的門市： 請選擇";
+      };
+      window.runFixture = async function runFixture(profile, options) {
+        submitted.count = 0;
+        pickerOpened.count = 0;
+        confirmed.count = 0;
+        confirmed.rateWhenClicked = "";
+        const filled = await FunboxFill.fillProfile(profile, options || { shippingMethod: "seven_cod", fillPersonal: false });
+        const volumeFromBody = FunboxAlerts.extractVolumeMessage(document.body.innerText || "");
+        return {
+          filled,
+          submitted: submitted.count,
+          pickerOpened: pickerOpened.count,
+          confirmed: confirmed.count,
+          confirmedRate: confirmed.rateWhenClicked,
+          volumeFromBody,
+          storeReady: Boolean(filled.storeReady),
+          placeOrderFound: Boolean(FunboxFill.placeOrderButton()),
+          selectedTitle: FunboxFill.selectedCvsStore ? (document.querySelector(".grid-button.active .title") || {}).innerText || "" : "",
+          activeTitle: ((document.querySelector(".grid-button.active .title") || {}).innerText || "").trim(),
+          values: {
+            name: document.getElementById("customer_name").value,
+            email: document.getElementById("customer_email").value,
+            phone: document.getElementById("customer_phone").value,
+            city: document.getElementById("city").value,
+            district: document.getElementById("district").value,
+            zip: document.getElementById("zip").value,
+            address: document.getElementById("address").value,
+            note: document.getElementById("note").value,
+            payment: document.querySelector("[name=payment]:checked")?.value || "",
+            shippingRate: document.getElementById("shipping_rate").value,
+            sevenId: document.getElementById("seven_store_id").value,
+            familyId: document.getElementById("family_store_id").value,
+          },
+        };
+      };
+      document.getElementById("city-combo").addEventListener("click", () => {
+        const list = document.getElementById("city-combo-list");
+        list.hidden = !list.hidden;
+      });
+      document.querySelectorAll("#city-combo-list [role=option]").forEach((li) => {
+        li.addEventListener("click", (event) => {
+          event.stopPropagation();
+          document.getElementById("city-combo-input").value = li.textContent;
+          document.getElementById("city-combo-list").hidden = true;
+        });
+      });
+    </script>
+  </body>
+</html>

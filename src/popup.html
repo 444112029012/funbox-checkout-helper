@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <title>Funbox 結帳助手</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Funbox 結帳助手</h1>
+        <p>加車 → 結帳頁 → 預設 7-11 貨到付款</p>
+      </div>
+      <aside class="disclaimer">
+        <details>
+          <summary>免責聲明</summary>
+          <p>本工具為非官方開源專案，與 Funbox、麗嬰國際、CYBERBIZ、7-ELEVEN、全家 FamilyMart 無關，亦非其授權、代理或合作產品。</p>
+          <p>你在此外掛填寫的個資、設定與操作紀錄，僅保存在你這台電腦的 Chrome 本機儲存（chrome.storage.local），外掛作者沒有伺服器，<strong>不會上傳、蒐集或轉售你的資料</strong>。卸載此外掛即可清除本機資料。若結帳頁需要補填，資料才可能寫入 Funbox 官網表單；送出訂單後由 Funbox 依其隱私權政策處理。</p>
+          <p>本外掛<strong>不串接信用卡、ATM、LINE Pay 或其他金流</strong>，不代收付款，也不處理購物金流。自動送出僅限你主動選擇的超商貨到付款；先付款與宅配不會自動下單。</p>
+          <p>禁止利用本工具對網站進行攻擊、癱瘓、繞過驗證、過高頻率刷新、大量爬取、囤積、黃牛或<strong>二次轉賣</strong>等惡意或違法行為。請遵守 Funbox 網站條款與相關法令。</p>
+          <p>使用、購買、未買到、重複下單、帳號停權、爭議、損失及任何法律責任，均由使用者自行承擔。本工具不提供保證。贊助與 Funbox 結帳無關。</p>
+        </details>
+      </aside>
+    </header>
+    <form id="form">
+      <div id="statusWrap" class="status-wrap">
+        <span id="statusLabel" class="status-label" hidden>上次結果</span>
+        <p id="status" class="status"></p>
+        <p id="watchLive" class="watch-live" hidden></p>
+      </div>
+      <div class="actions">
+        <button type="submit" name="save">儲存</button>
+        <button type="button" id="run">開始執行</button>
+        <button type="button" id="openProduct" class="secondary">只進入商品頁</button>
+      </div>
+      <p class="hint" id="whereHint">即時狀態看頁面右下角。設定與個資只存在本機。</p>
+      <div class="cols">
+        <div class="col">
+          <label>商品或分類網址
+            <input name="productUrl" placeholder="https://shop.funbox.com.tw/products/…" />
+          </label>
+          <p class="hint">分類頁只加新上架 1 件。</p>
+          <div class="row triple">
+            <label>數量
+              <input name="quantity" type="number" min="1" value="1" />
+            </label>
+            <label>規格 ID
+              <input name="variantId" placeholder="可空" />
+            </label>
+            <label>偵測間隔
+              <select name="pollSec">
+                <option value="3">3 秒</option>
+                <option value="5">5 秒</option>
+                <option value="10" selected>10 秒</option>
+                <option value="15">15 秒</option>
+                <option value="30">30 秒</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint" id="qtyHint">超商建議 1 件。</p>
+          <h2>配送方式</h2>
+          <div class="choice grid" role="radiogroup" aria-label="配送方式">
+            <label><input type="radio" name="shippingMethod" value="seven_cod" checked /> 7-11 貨到付款</label>
+            <label><input type="radio" name="shippingMethod" value="family_cod" /> 全家貨到付款</label>
+            <label><input type="radio" name="shippingMethod" value="seven_prepaid" /> 7-11 先付款</label>
+            <label><input type="radio" name="shippingMethod" value="family_prepaid" /> 全家先付款</label>
+            <label><input type="radio" name="shippingMethod" value="home" /> 宅配（先付款）</label>
+          </div>
+          <p class="hint">宅配沒有貨到付款，不能直接結帳。</p>
+          <div class="row modes">
+            <div>
+              <h2>進入結帳</h2>
+              <div class="choice stacked" role="radiogroup" aria-label="進入結帳方式">
+                <label><input type="radio" name="checkoutEntry" value="api" checked /> API</label>
+                <label><input type="radio" name="checkoutEntry" value="click" /> 網頁點擊</label>
+                <label><input type="radio" name="checkoutEntry" value="api_then_click" /> 先 API 再點擊</label>
+              </div>
+            </div>
+            <div>
+              <h2>結帳動作</h2>
+              <div class="choice stacked" role="radiogroup" aria-label="結帳動作">
+                <label><input type="radio" name="checkoutMode" value="stop" checked /> 停在結帳頁</label>
+                <label id="submitModeLabel"><input type="radio" name="checkoutMode" value="submit" /> 直接結帳</label>
+              </div>
+              <p class="hint" id="submitModeHint">直接結帳僅限超商貨到付款。</p>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" name="watchIfOos" checked /> 缺貨時自動偵測</label>
+        </div>
+        <div class="col">
+          <section class="donate" aria-label="贊助">
+            <h2>贊助開發</h2>
+            <p id="donateLinks" class="donate-links">作者尚未放上贊助連結。</p>
+          </section>
+          <details class="pii" id="piiFields">
+            <summary>個資（選填）</summary>
+            <p class="hint">官網通常會帶入。沒帶入才用這裡補填，補填後請自行核對下單。只存在本機，不會上傳。</p>
+            <div class="row">
+              <label>姓名 <input name="name" /></label>
+              <label>Email <input name="email" type="email" /></label>
+              <label>手機 <input name="phone" placeholder="09xxxxxxxx" /></label>
+            </div>
+            <h2>收件人（空白則同購買人）</h2>
+            <div class="row">
+              <label>姓名 <input name="recipientName" /></label>
+              <label>手機 <input name="recipientPhone" /></label>
+            </div>
+            <h2>宅配地址</h2>
+            <div class="row">
+              <label>縣市 <input name="city" placeholder="臺北市" /></label>
+              <label>區域 <input name="district" placeholder="內湖區" /></label>
+              <label>郵遞區號 <input name="zip" /></label>
+            </div>
+            <label>詳細地址 <input name="address" /></label>
+            <label>備註 <input name="note" /></label>
+          </details>
+          <h2>最近紀錄</h2>
+          <p class="hint">本機保存，關視窗不會清。</p>
+          <div id="logs" class="log-list" role="log">尚無紀錄</div>
+        </div>
+      </div>
+    </form>
+    <script src="lib/product.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
