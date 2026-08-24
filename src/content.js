@@ -9,8 +9,10 @@
   const isTop = window.top === window;
   const WATCH_RELOAD_MS = 60000;
   const RELOAD_RESUME_MS = 20000;
+  const URL_RETRY_MS = 2000;
   let watchTimer = null;
   let watchReloadTimer = null;
+  let urlRetryTimer = null;
   let watchStop = false;
   let watchTickCount = 0;
   let volumeBlocked = false;
@@ -111,6 +113,41 @@
     });
   }
 
+  function isRegionBlockedPage() {
+    if (/\/thank_you_for_visiting/i.test(location.pathname)) return true;
+    const text = (document.body && document.body.innerText) || "";
+    return /此官網未服務您所在的區域/.test(text);
+  }
+
+  function watchHref(jobOrWatch) {
+    const raw = String((jobOrWatch && jobOrWatch.productUrl) || "").trim();
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, "https://shop.funbox.com.tw/");
+      if (!/^https:\/\/shop\.funbox\.com\.tw\//i.test(url.href)) return "";
+      return `${url.origin}${url.pathname}${url.search || ""}`;
+    } catch {
+      return "";
+    }
+  }
+
+  function isOnExpectedWatchPage(jobOrWatch) {
+    if (isRegionBlockedPage()) return false;
+    const expected = FunboxProduct.parseTarget((jobOrWatch && jobOrWatch.productUrl) || "");
+    const current = FunboxProduct.parseTarget(location.href);
+    if (expected.kind === "product") {
+      return current.kind === "product" && String(current.handle || "").toLowerCase() === String(expected.handle || "").toLowerCase();
+    }
+    if (expected.kind === "listing") {
+      return (
+        current.kind === "listing" &&
+        current.listingType === expected.listingType &&
+        String(current.listingPath || "").toLowerCase() === String(expected.listingPath || "").toLowerCase()
+      );
+    }
+    return false;
+  }
+
   function scheduleWatchReload() {
     if (watchReloadTimer) clearTimeout(watchReloadTimer);
     watchReloadTimer = setTimeout(() => {
@@ -118,15 +155,50 @@
     }, WATCH_RELOAD_MS);
   }
 
-  async function reloadForSession() {
-    if (watchStop || !isTop) return;
-    await logStep("watch_reload", "重整頁面以維持登入（每 1 分鐘）");
+  async function recoverWatchUrl(jobOrWatch, reason) {
+    const href = watchHref(jobOrWatch);
+    if (watchStop || !isTop || !href) return false;
+    const n = Number((jobOrWatch && jobOrWatch.urlRetryCount) || 0) + 1;
+    await logStep("watch_url_mismatch", `${reason || "wrong_page"} now=${location.pathname} → ${href} retry=${n}`, "error");
+    if (typeof FunboxOverlay !== "undefined") {
+      FunboxOverlay.show("頁面被導走", `2 秒後重新載入監看網址（第 ${n} 次）`, "error");
+    }
+    showStopWatchButton();
+    if (urlRetryTimer) clearTimeout(urlRetryTimer);
+    urlRetryTimer = setTimeout(() => {
+      openWatchUrl(href, n).catch(() => {});
+    }, URL_RETRY_MS);
+    return true;
+  }
+
+  async function openWatchUrl(href, urlRetryCount) {
+    if (watchStop || !href) return;
     await setWatchState({
       active: true,
       plannedReload: true,
       plannedReloadAt: Date.now(),
       tickCount: watchTickCount,
+      urlRetryCount: Number(urlRetryCount) || 0,
     });
+    location.assign(href);
+  }
+
+  async function reloadForSession() {
+    if (watchStop || !isTop) return;
+    const watch = ((await chrome.storage.local.get("funboxHelperWatch")).funboxHelperWatch) || {};
+    const href = watchHref(watch);
+    await logStep("watch_reload", href ? `重新載入監看網址 ${href}` : "重整頁面以維持登入（每 1 分鐘）");
+    await setWatchState({
+      active: true,
+      plannedReload: true,
+      plannedReloadAt: Date.now(),
+      tickCount: watchTickCount,
+      urlRetryCount: 0,
+    });
+    if (href && !isOnExpectedWatchPage(watch)) {
+      location.assign(href);
+      return;
+    }
     location.reload();
   }
 
@@ -417,16 +489,22 @@
     watchTimer = null;
     if (watchReloadTimer) clearTimeout(watchReloadTimer);
     watchReloadTimer = null;
+    if (urlRetryTimer) clearTimeout(urlRetryTimer);
+    urlRetryTimer = null;
     if (typeof FunboxOverlay !== "undefined") {
       if (FunboxOverlay.stopCountdown) FunboxOverlay.stopCountdown();
       if (FunboxOverlay.removeStopWatchButton) FunboxOverlay.removeStopWatchButton();
       if (FunboxOverlay.setWatchLabel) FunboxOverlay.setWatchLabel(false);
     }
-    await setWatchState({ active: false, nextTickAt: 0, plannedReload: false, plannedReloadAt: 0 });
+    await setWatchState({ active: false, nextTickAt: 0, plannedReload: false, plannedReloadAt: 0, urlRetryCount: 0 });
   }
 
   async function watchTick(job) {
     if (watchStop) return;
+    if (job && job.productUrl && !isOnExpectedWatchPage(job)) {
+      await recoverWatchUrl(job, "during_watch");
+      return;
+    }
     const target = FunboxProduct.parseTarget(job.productUrl || location.href);
     const sec = pollSecOf(job);
     const title = target.kind === "listing" ? "監看新上架" : "監看庫存";
@@ -778,19 +856,28 @@
       });
       return;
     }
-    await setWatchState({ plannedReload: false, plannedReloadAt: 0 });
     watchStop = false;
     watchTickCount = Number(watch.tickCount || 0);
     const stored = await storedJob(false);
     const job = {
       ...stored,
-      productUrl: watch.productUrl || location.href,
+      productUrl: watch.productUrl || (!isRegionBlockedPage() && (FunboxProduct.isListingPage() || FunboxProduct.isProductPage()) ? location.href : ""),
       variantId: watch.variantId || stored.variantId,
       listingSeenHandles: watch.listingSeenHandles || [],
       listingType: watch.listingType,
       listingPath: watch.listingPath,
       pollSec: watch.intervalSec || stored.pollSec,
+      urlRetryCount: watch.urlRetryCount || 0,
     };
+    if (!isOnExpectedWatchPage(job)) {
+      const recovered = await recoverWatchUrl(job, "after_reload");
+      if (!recovered) {
+        await stopWatch();
+        if (typeof FunboxOverlay !== "undefined") FunboxOverlay.show("無法回到監看頁", "監看網址遺失，已停止。", "error");
+      }
+      return;
+    }
+    await setWatchState({ plannedReload: false, plannedReloadAt: 0, urlRetryCount: 0 });
     showStopWatchButton();
     scheduleWatchReload();
     await logStep("watch_resume", `頁面已重整以維持登入 · 已查 ${watchTickCount} 次 · 繼續偵測`);
