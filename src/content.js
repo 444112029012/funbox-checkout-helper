@@ -53,6 +53,17 @@
     return true;
   }
 
+  async function watchIsActive() {
+    if (!watchStop && (watchTimer || watchReloadTimer || urlRetryTimer)) return true;
+    const watch = ((await chrome.storage.local.get("funboxHelperWatch")).funboxHelperWatch) || {};
+    return Boolean(watch.active);
+  }
+
+  function isStockFailure(err) {
+    const text = err && err.message ? err.message : String(err || "");
+    return /缺貨|庫存不足|已售完|無庫存|HTTP 409|購買上限為 0/i.test(text);
+  }
+
   async function surfaceSiteMessage(hit) {
     if (!hit) return;
     if (hit.kind === "volume") {
@@ -64,12 +75,15 @@
       if (isTop) FunboxOverlay.show("官網：超商材積超限", "", "error");
       return;
     }
-    await logStep("site_message", `${hit.kind}: ${hit.text}`, hit.kind === "stock" ? "error" : "info");
     if (hit.kind === "stock") {
+      const watching = await watchIsActive();
+      await logStep("site_message", `stock: ${hit.text}`, watching ? "info" : "error");
+      if (watching) return;
       if (isTop) FunboxOverlay.show("官網庫存訊息", "", "error");
-    } else if (isTop) {
-      FunboxOverlay.show("官網訊息", "", "error");
+      return;
     }
+    await logStep("site_message", `${hit.kind}: ${hit.text}`, "info");
+    if (isTop) FunboxOverlay.show("官網訊息", "", "error");
   }
 
   function startAlertWatch() {
@@ -391,6 +405,7 @@
     }
     const openMs = Date.now() - openStarted;
     await logStep("open_checkout", `path=${entry} via=${openVia} href=${checkoutHref} add_ms=${addMs} open_checkout_ms=${openMs}`);
+    await stopWatch();
     await setJob({
       ...job,
       active: true,
@@ -420,8 +435,9 @@
     const data = await FunboxProduct.loadListing(target);
     const items = FunboxProduct.normalizeListing(data);
     const seen = items.map((row) => row.handle);
+    const stockMap = FunboxProduct.listingStockMap(items);
     const label = `${target.listingType}/${target.listingPath}`;
-    await logStep("watch_listing", `${label} · 已記錄 ${seen.length} 件現有商品，只會加新上架的 1 件 · 每 ${sec} 秒 API 偵測，每 1 分鐘重整頁面以免登入過期`);
+    await logStep("watch_listing", `${label} · 已記錄 ${seen.length} 件現有商品，只會加新上架或補貨有庫存的 1 件 · 每 ${sec} 秒 API 偵測，每 1 分鐘重整頁面以免登入過期`);
     await setJob({
       ...job,
       active: true,
@@ -433,6 +449,7 @@
       ...job,
       productUrl: job.productUrl || location.href,
       listingSeenHandles: seen,
+      listingStockMap: stockMap,
       listingType: target.listingType,
       listingPath: target.listingPath,
     };
@@ -444,6 +461,7 @@
       intervalSec: sec,
       productUrl: nextJob.productUrl,
       listingSeenHandles: seen,
+      listingStockMap: stockMap,
       tickCount: 0,
       title: "監看新上架",
       lastDetail: `${label} · API 偵測中`,
@@ -499,6 +517,43 @@
     await setWatchState({ active: false, nextTickAt: 0, plannedReload: false, plannedReloadAt: 0, urlRetryCount: 0 });
   }
 
+  async function tryBuyIfInStock(job, found) {
+    const handle = found && found.handle;
+    if (!handle) return { ok: false, reason: "no_handle" };
+    if (isTop && typeof FunboxOverlay !== "undefined") FunboxOverlay.show("確認庫存", handle);
+    let product;
+    let variant;
+    try {
+      product = await FunboxProduct.loadProduct(handle);
+      variant = FunboxProduct.pickVariant(product, job && job.variantId);
+    } catch (err) {
+      await logStep("stock_recheck_error", `${handle}: ${err && err.message ? err.message : err}`, "error");
+      return { ok: false, reason: "load" };
+    }
+    if (!variant || !FunboxProduct.isVariantInStock(variant)) {
+      await logStep("still_oos", `${handle} 無庫存，繼續監看`);
+      return { ok: false, reason: "oos" };
+    }
+    try {
+      const result = await addAndOpenCheckout({
+        ...job,
+        productUrl: FunboxProduct.productPageUrl(handle),
+        handle,
+        variantId: variant.id,
+        skipWatch: true,
+        fromRestock: true,
+        fromListing: Boolean(job && job.fromListing),
+      });
+      return { ok: true, result };
+    } catch (err) {
+      if (isStockFailure(err)) {
+        await logStep("add_oos_continue", `${handle}: ${err && err.message ? err.message : err}`);
+        return { ok: false, reason: "add_oos" };
+      }
+      throw err;
+    }
+  }
+
   async function watchTick(job) {
     if (watchStop) return;
     if (job && job.productUrl && !isOnExpectedWatchPage(job)) {
@@ -512,31 +567,28 @@
       if (target.kind === "listing") {
         const data = await FunboxProduct.loadListing(target);
         const items = FunboxProduct.normalizeListing(data);
-        const found = FunboxProduct.findNewInStock(items, job.listingSeenHandles || []);
+        if (!job.listingStockMap) job.listingStockMap = FunboxProduct.listingStockMap(items);
+        const found = FunboxProduct.findPurchasable(items, job.listingStockMap);
         if (found) {
           if (volumeBlocked) {
             await logStep("watch_skip", "已因體積限制停止，不再重試加車", "error");
             await stopWatch();
             return;
           }
-          await logStep("listing_new", found.handle);
-          FunboxOverlay.show("偵測到新商品", `將加入 1 件：${found.handle}${found.title ? `（${found.title}）` : ""}。之後可改填商品頁網址鎖定這件。`);
-          await stopWatch();
-          const result = await addAndOpenCheckout({
-            ...job,
-            productUrl: FunboxProduct.productPageUrl(found.handle),
-            handle: found.handle,
-            skipWatch: true,
-            fromRestock: true,
-            fromListing: true,
-          });
-          if (result.navigated || result.watching) return;
-          await fillWhenReady({ ...job, productUrl: FunboxProduct.productPageUrl(found.handle), handle: found.handle, fromListing: true, fromRestock: true });
-          return;
+          await logStep("listing_candidate", `${found.handle}${found.title ? `（${found.title}）` : ""}`);
+          const attempt = await tryBuyIfInStock({ ...job, fromListing: true }, found);
+          if (attempt.ok) {
+            if (attempt.result.navigated || attempt.result.watching) return;
+            await fillWhenReady({ ...job, productUrl: FunboxProduct.productPageUrl(found.handle), handle: found.handle, fromListing: true, fromRestock: true });
+            return;
+          }
+          job.listingStockMap = FunboxProduct.markListingOutOfStock(job.listingStockMap, found.handle);
+        } else {
+          job.listingStockMap = FunboxProduct.mergeListingStock(job.listingStockMap, items);
         }
         watchTickCount += 1;
         const label = `${target.listingType}/${target.listingPath}`;
-        const detail = `${label} · 尚無新品 · 已查 ${watchTickCount} 次 · 每 ${sec} 秒偵測，每 1 分鐘重整以免登入過期`;
+        const detail = `${label} · 尚無可結帳庫存 · 已查 ${watchTickCount} 次 · 每 ${sec} 秒偵測，每 1 分鐘重整以免登入過期`;
         await logStep("watch_tick", detail);
         const nextAt = beginWatchCountdown(title, detail, sec);
         await setWatchState({
@@ -547,6 +599,8 @@
           title,
           lastDetail: detail,
           intervalSec: sec,
+          listingSeenHandles: items.map((row) => row.handle),
+          listingStockMap: job.listingStockMap,
         });
       } else {
         const handle = target.kind === "product" ? target.handle : FunboxProduct.parseHandle(job.productUrl || location.href);
@@ -559,11 +613,15 @@
             return;
           }
           await logStep("stock_found", String(variant.id));
-          await stopWatch();
-          const result = await addAndOpenCheckout({ ...job, skipWatch: true, fromRestock: true });
-          if (result.navigated || result.watching) return;
-          await fillWhenReady(job);
-          return;
+          try {
+            const result = await addAndOpenCheckout({ ...job, skipWatch: true, fromRestock: true });
+            if (result.navigated || result.watching) return;
+            await fillWhenReady(job);
+            return;
+          } catch (err) {
+            if (!isStockFailure(err)) throw err;
+            await logStep("add_oos_continue", err && err.message ? err.message : String(err));
+          }
         }
         watchTickCount += 1;
         const detail = `${handle || "商品"} · 仍缺貨 · 已查 ${watchTickCount} 次 · 每 ${sec} 秒偵測，每 1 分鐘重整以免登入過期`;
@@ -580,8 +638,12 @@
         });
       }
     } catch (err) {
-      await logStep("watch_error", err && err.message ? err.message : String(err), "error");
-      FunboxOverlay.show("監看出錯", err && err.message ? err.message : String(err), "error");
+      if (isStockFailure(err)) {
+        await logStep("watch_oos_continue", err && err.message ? err.message : String(err));
+      } else {
+        await logStep("watch_error", err && err.message ? err.message : String(err), "error");
+        FunboxOverlay.show("監看出錯", err && err.message ? err.message : String(err), "error");
+      }
     }
     watchTimer = setTimeout(() => watchTick(job), sec * 1000);
   }
@@ -864,6 +926,7 @@
       productUrl: watch.productUrl || (!isRegionBlockedPage() && (FunboxProduct.isListingPage() || FunboxProduct.isProductPage()) ? location.href : ""),
       variantId: watch.variantId || stored.variantId,
       listingSeenHandles: watch.listingSeenHandles || [],
+      listingStockMap: watch.listingStockMap || null,
       listingType: watch.listingType,
       listingPath: watch.listingPath,
       pollSec: watch.intervalSec || stored.pollSec,

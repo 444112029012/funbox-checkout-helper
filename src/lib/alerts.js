@@ -78,7 +78,9 @@
     for (const line of lines) {
       if (line.length > 80) continue;
       const hit = classify(line);
-      if (hit && hit.kind !== "volume") out.push(hit);
+      if (!hit || hit.kind === "volume") continue;
+      if (hit.kind === "stock" && /^(商品已售完|已售完|無庫存|sold\s*out)$/i.test(line)) continue;
+      out.push(hit);
     }
     return out;
   }

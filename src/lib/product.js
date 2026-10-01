@@ -15,10 +15,11 @@
 
   function isVariantInStock(variant) {
     if (!variant) return false;
+    if (variant.available === false) return false;
     const qty = Number(variant.inventory_quantity);
-    const policy = String(variant.inventory_policy || "").toLowerCase();
-    if (variant.available === true || qty > 0 || policy === "continue") return true;
-    return false;
+    if (Number.isFinite(qty)) return qty > 0;
+    if (variant.available === true) return true;
+    return String(variant.inventory_policy || "").toLowerCase() === "continue";
   }
 
   function parseHandle(url) {
@@ -93,12 +94,13 @@
 
   function handleFromListingItem(item) {
     if (!item) return "";
-    if (item.handle) return String(item.handle).replace(/\.json$/i, "");
-    if (item.full_handle) {
-      const parts = String(item.full_handle).split("/").filter(Boolean);
-      return (parts[parts.length - 1] || "").replace(/\.json$/i, "");
+    const fromUrl = parseHandle(item.url || "");
+    if (fromUrl) return fromUrl;
+    if (item.handle) {
+      const h = String(item.handle).replace(/\.json$/i, "");
+      if (h && !/[\\/]/.test(h)) return h;
     }
-    return parseHandle(item.url || "");
+    return "";
   }
 
   function normalizeListing(data) {
@@ -107,7 +109,7 @@
       .map((item) => {
         const handle = handleFromListingItem(item);
         const variants = item.variants || [];
-        const inStock = variants.some((v) => isVariantInStock(v)) || item.available === true;
+        const inStock = variants.length ? variants.some((v) => isVariantInStock(v)) : item.available === true;
         return {
           handle,
           title: item.title || handle,
@@ -122,6 +124,37 @@
   function findNewInStock(items, seenHandles) {
     const seen = new Set((seenHandles || []).map((h) => String(h).toLowerCase()));
     return (items || []).find((row) => row.inStock && row.handle && !seen.has(String(row.handle).toLowerCase())) || null;
+  }
+
+  function stockKey(handle) {
+    return String(handle || "").toLowerCase();
+  }
+
+  function listingStockMap(items) {
+    const map = {};
+    for (const row of items || []) {
+      if (!row.handle) continue;
+      map[stockKey(row.handle)] = Boolean(row.inStock);
+    }
+    return map;
+  }
+
+  function findPurchasable(items, stockMap) {
+    const map = stockMap || {};
+    return (items || []).find((row) => row.handle && row.inStock && map[stockKey(row.handle)] !== true) || null;
+  }
+
+  function markListingOutOfStock(stockMap, handle) {
+    return { ...(stockMap || {}), [stockKey(handle)]: false };
+  }
+
+  function mergeListingStock(stockMap, items) {
+    const map = { ...(stockMap || {}) };
+    for (const row of items || []) {
+      if (!row.handle) continue;
+      if (!row.inStock) map[stockKey(row.handle)] = false;
+    }
+    return map;
   }
 
   function variantInventoryCap(variant) {
@@ -198,6 +231,11 @@
     loadListing,
     normalizeListing,
     findNewInStock,
+    listingStockMap,
+    findPurchasable,
+    markListingOutOfStock,
+    mergeListingStock,
+    handleFromListingItem,
     isProductPage,
     isListingPage,
     isVariantInStock,
