@@ -346,12 +346,13 @@ button:active {
 }
 
 .log-panel {
-  min-height: 0;
+  min-height: auto;
 }
 
 .log-list {
   max-height: 240px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-size: 12px;
   line-height: 1.45;
   background: var(--canvas);
@@ -360,29 +361,30 @@ button:active {
   padding: 8px;
   margin: 0;
   color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: block;
 }
 
 .log-list:not(:has(.log-row)) {
   min-height: 96px;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   color: var(--steel);
   text-align: center;
 }
 
 .log-row {
+  display: block;
   padding: 8px 10px;
+  margin: 0 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 4px;
-  min-height: 0;
-  isolation: isolate;
+  min-height: auto;
+  overflow: hidden;
+}
+
+.log-row:last-child {
+  margin-bottom: 0;
 }
 
 .log-meta {
@@ -408,7 +410,7 @@ button:active {
 }
 
 .log-step {
-  margin: 0;
+  margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
