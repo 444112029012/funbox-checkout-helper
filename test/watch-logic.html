@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <title>Watch logic checks</title>
+  </head>
+  <body>
+    <pre id="out">running…</pre>
+    <p>商品已售完</p>
+    <script src="../src/lib/alerts.js"></script>
+    <script src="../src/lib/product.js"></script>
+    <script>
+      const listing = [
+        {
+          title: "BEYBLADE X 戰鬥陀螺 CX-16 極限衝擊對戰組C",
+          url: "/products/bb09728",
+          tags: ["TOY"],
+          variants: [{ inventory_quantity: 0, inventory_policy: "deny", available: false }],
+        },
+        {
+          title: "【APP兌換】交換票券_戰鬥陀螺 CX-00 龍神勇氣G4-70I 金屬塗裝：水藍",
+          url: "/products/bbpr08914",
+          tags: ["BBPR08914", "3950"],
+          slogan: "˙戰鬥陀螺APP活動商品",
+          variants: [{ inventory_quantity: 189, inventory_policy: "deny" }],
+        },
+      ];
+      const fail = [];
+      const items = FunboxProduct.normalizeListing(listing);
+      const app = items.find((row) => row.handle === "bbpr08914");
+      const sold = items.find((row) => row.handle === "bb09728");
+      if (!app || app.ignored !== true) fail.push("APP not ignored");
+      if (app.inStock !== false) fail.push("APP treated as in stock");
+      if (!sold || sold.inStock !== false || sold.ignored) fail.push("sold item wrong");
+      const map = FunboxProduct.listingStockMap(items);
+      if (FunboxProduct.findPurchasable(items, map)) fail.push("would buy at start");
+      const restock = FunboxProduct.normalizeListing([
+        { ...listing[0], variants: [{ inventory_quantity: 4, inventory_policy: "deny" }] },
+        listing[1],
+      ]);
+      const found = FunboxProduct.findPurchasable(restock, map);
+      if (!found || found.handle !== "bb09728") fail.push("restock should buy bb09728");
+      if (FunboxProduct.isAppRedemption({ title: app.title, handle: "bbpr08914" }) !== true) fail.push("isAppRedemption title");
+      const hits = FunboxAlerts.scan();
+      if (hits.some((hit) => hit.kind === "stock")) fail.push("ambient 商品已售完 scanned as stock");
+      document.getElementById("out").textContent = fail.length ? "FAIL\n" + fail.join("\n") : "PASS";
+      window.__watchLogic = { fail, items, found: found && found.handle };
+    </script>
+  </body>
+</html>

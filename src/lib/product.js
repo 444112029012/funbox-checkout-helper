@@ -92,6 +92,17 @@
     return res.json();
   }
 
+  function isAppRedemption(item, handleHint) {
+    const handle = String(
+      handleHint || handleFromListingItem(item) || (item && item.handle) || ""
+    ).replace(/\.json$/i, "");
+    const tags = item && Array.isArray(item.tags) ? item.tags.join(" ") : String((item && item.tags) || "");
+    const blob = `${(item && item.title) || ""} ${(item && item.brief) || ""} ${(item && item.slogan) || ""} ${tags} ${handle}`;
+    if (/APP\s*兌換/i.test(blob)) return true;
+    if (/^bbpr/i.test(handle)) return true;
+    return false;
+  }
+
   function handleFromListingItem(item) {
     if (!item) return "";
     const fromUrl = parseHandle(item.url || "");
@@ -109,13 +120,19 @@
       .map((item) => {
         const handle = handleFromListingItem(item);
         const variants = item.variants || [];
-        const inStock = variants.length ? variants.some((v) => isVariantInStock(v)) : item.available === true;
+        const ignored = isAppRedemption({ ...item, handle });
+        const inStock = ignored
+          ? false
+          : variants.length
+            ? variants.some((v) => isVariantInStock(v))
+            : item.available === true;
         return {
           handle,
           title: item.title || handle,
           url: item.url || (handle ? `/products/${handle}` : ""),
           variants,
           inStock,
+          ignored,
         };
       })
       .filter((row) => row.handle);
@@ -123,7 +140,7 @@
 
   function findNewInStock(items, seenHandles) {
     const seen = new Set((seenHandles || []).map((h) => String(h).toLowerCase()));
-    return (items || []).find((row) => row.inStock && row.handle && !seen.has(String(row.handle).toLowerCase())) || null;
+    return (items || []).find((row) => row.inStock && row.handle && !row.ignored && !seen.has(String(row.handle).toLowerCase())) || null;
   }
 
   function stockKey(handle) {
@@ -141,7 +158,7 @@
 
   function findPurchasable(items, stockMap) {
     const map = stockMap || {};
-    return (items || []).find((row) => row.handle && row.inStock && map[stockKey(row.handle)] !== true) || null;
+    return (items || []).find((row) => row.handle && !row.ignored && row.inStock && map[stockKey(row.handle)] !== true) || null;
   }
 
   function markListingOutOfStock(stockMap, handle) {
@@ -236,6 +253,7 @@
     markListingOutOfStock,
     mergeListingStock,
     handleFromListingItem,
+    isAppRedemption,
     isProductPage,
     isListingPage,
     isVariantInStock,
