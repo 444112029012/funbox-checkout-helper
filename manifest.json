@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Funbox 結帳助手",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "Funbox 官網：加車、打開 /carts 結帳頁、選 7-11 貨到付款。官網通常帶入個資；直接結帳僅限超商貨到付款。",
   "action": {
     "default_title": "Funbox 結帳助手",

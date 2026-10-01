@@ -7,9 +7,13 @@
   </head>
   <body>
     <header>
-      <div>
-        <h1>Funbox 結帳助手</h1>
-        <p>加車 → 結帳頁 → 預設 7-11 貨到付款</p>
+      <div class="brand">
+        <img class="brand-mark" src="../icons/icon48.png" width="40" height="40" alt="" />
+        <div>
+          <p class="eyebrow">本機外掛</p>
+          <h1>Funbox 結帳助手</h1>
+          <p>加車 → 結帳頁 → 預設 7-11 貨到付款</p>
+        </div>
       </div>
       <aside class="disclaimer">
         <details>
@@ -23,69 +27,78 @@
       </aside>
     </header>
     <form id="form">
-      <div id="statusWrap" class="status-wrap">
-        <span id="statusLabel" class="status-label" hidden>上次結果</span>
-        <p id="status" class="status"></p>
-        <p id="watchLive" class="watch-live" hidden></p>
+      <div class="command">
+        <div id="statusWrap" class="status-wrap">
+          <span id="statusLabel" class="status-label" hidden>上次結果</span>
+          <p id="status" class="status"></p>
+          <p id="watchLive" class="watch-live" hidden></p>
+        </div>
+        <div class="actions">
+          <button type="submit" name="save" class="ghost">儲存</button>
+          <button type="button" id="run" class="primary">開始執行</button>
+          <button type="button" id="openProduct" class="ghost">只進入商品頁</button>
+        </div>
+        <p class="hint" id="whereHint">即時狀態看頁面右下角。設定與個資只存在本機。</p>
       </div>
-      <div class="actions">
-        <button type="submit" name="save">儲存</button>
-        <button type="button" id="run">開始執行</button>
-        <button type="button" id="openProduct" class="secondary">只進入商品頁</button>
-      </div>
-      <p class="hint" id="whereHint">即時狀態看頁面右下角。設定與個資只存在本機。</p>
       <div class="cols">
         <div class="col">
-          <label>商品或分類網址
-            <input name="productUrl" placeholder="https://shop.funbox.com.tw/products/…" />
-          </label>
-          <p class="hint">分類頁只加新上架 1 件。</p>
-          <div class="row triple">
-            <label>數量
-              <input name="quantity" type="number" min="1" value="1" />
+          <section class="panel">
+            <h2>目標</h2>
+            <label>商品或分類網址
+              <input name="productUrl" placeholder="https://shop.funbox.com.tw/products/…" />
             </label>
-            <label>規格 ID
-              <input name="variantId" placeholder="可空" />
-            </label>
-            <label>偵測間隔
-              <select name="pollSec">
-                <option value="3">3 秒</option>
-                <option value="5">5 秒</option>
-                <option value="10" selected>10 秒</option>
-                <option value="15">15 秒</option>
-                <option value="30">30 秒</option>
-              </select>
-            </label>
-          </div>
-          <p class="hint" id="qtyHint">超商建議 1 件。</p>
-          <h2>配送方式</h2>
-          <div class="choice grid" role="radiogroup" aria-label="配送方式">
-            <label><input type="radio" name="shippingMethod" value="seven_cod" checked /> 7-11 貨到付款</label>
-            <label><input type="radio" name="shippingMethod" value="family_cod" /> 全家貨到付款</label>
-            <label><input type="radio" name="shippingMethod" value="seven_prepaid" /> 7-11 先付款</label>
-            <label><input type="radio" name="shippingMethod" value="family_prepaid" /> 全家先付款</label>
-            <label><input type="radio" name="shippingMethod" value="home" /> 宅配（先付款）</label>
-          </div>
-          <p class="hint">宅配沒有貨到付款，不能直接結帳。</p>
-          <div class="row modes">
-            <div>
-              <h2>進入結帳</h2>
-              <div class="choice stacked" role="radiogroup" aria-label="進入結帳方式">
-                <label><input type="radio" name="checkoutEntry" value="api" checked /> API</label>
-                <label><input type="radio" name="checkoutEntry" value="click" /> 網頁點擊</label>
-                <label><input type="radio" name="checkoutEntry" value="api_then_click" /> 先 API 再點擊</label>
+            <p class="hint">分類頁只加新上架 1 件。</p>
+            <div class="row triple">
+              <label>數量
+                <input name="quantity" type="number" min="1" value="1" />
+              </label>
+              <label>規格 ID
+                <input name="variantId" placeholder="可空" />
+              </label>
+              <label>偵測間隔
+                <select name="pollSec">
+                  <option value="3">3 秒</option>
+                  <option value="5">5 秒</option>
+                  <option value="10" selected>10 秒</option>
+                  <option value="15">15 秒</option>
+                  <option value="30">30 秒</option>
+                </select>
+              </label>
+            </div>
+            <p class="hint" id="qtyHint">超商建議 1 件。</p>
+          </section>
+          <section class="panel">
+            <h2>配送方式</h2>
+            <div class="choice grid" role="radiogroup" aria-label="配送方式">
+              <label><input type="radio" name="shippingMethod" value="seven_cod" checked /> 7-11 貨到付款</label>
+              <label><input type="radio" name="shippingMethod" value="family_cod" /> 全家貨到付款</label>
+              <label><input type="radio" name="shippingMethod" value="seven_prepaid" /> 7-11 先付款</label>
+              <label><input type="radio" name="shippingMethod" value="family_prepaid" /> 全家先付款</label>
+              <label><input type="radio" name="shippingMethod" value="home" /> 宅配（先付款）</label>
+            </div>
+            <p class="hint">宅配沒有貨到付款，不能直接結帳。</p>
+          </section>
+          <section class="panel">
+            <div class="row modes">
+              <div>
+                <h2>進入結帳</h2>
+                <div class="choice stacked" role="radiogroup" aria-label="進入結帳方式">
+                  <label><input type="radio" name="checkoutEntry" value="api" checked /> API</label>
+                  <label><input type="radio" name="checkoutEntry" value="click" /> 網頁點擊</label>
+                  <label><input type="radio" name="checkoutEntry" value="api_then_click" /> 先 API 再點擊</label>
+                </div>
+              </div>
+              <div>
+                <h2>結帳動作</h2>
+                <div class="choice stacked" role="radiogroup" aria-label="結帳動作">
+                  <label><input type="radio" name="checkoutMode" value="stop" checked /> 停在結帳頁</label>
+                  <label id="submitModeLabel"><input type="radio" name="checkoutMode" value="submit" /> 直接結帳</label>
+                </div>
+                <p class="hint" id="submitModeHint">直接結帳僅限超商貨到付款。</p>
               </div>
             </div>
-            <div>
-              <h2>結帳動作</h2>
-              <div class="choice stacked" role="radiogroup" aria-label="結帳動作">
-                <label><input type="radio" name="checkoutMode" value="stop" checked /> 停在結帳頁</label>
-                <label id="submitModeLabel"><input type="radio" name="checkoutMode" value="submit" /> 直接結帳</label>
-              </div>
-              <p class="hint" id="submitModeHint">直接結帳僅限超商貨到付款。</p>
-            </div>
-          </div>
-          <label class="check"><input type="checkbox" name="watchIfOos" checked /> 缺貨時自動偵測</label>
+            <label class="check"><input type="checkbox" name="watchIfOos" checked /> 缺貨時自動偵測</label>
+          </section>
         </div>
         <div class="col">
           <section class="donate" aria-label="贊助">
@@ -114,9 +127,11 @@
             <label>詳細地址 <input name="address" /></label>
             <label>備註 <input name="note" /></label>
           </details>
-          <h2>最近紀錄</h2>
-          <p class="hint">本機保存，關視窗不會清。</p>
-          <div id="logs" class="log-list" role="log">尚無紀錄</div>
+          <section class="panel log-panel">
+            <h2>最近紀錄</h2>
+            <p class="hint">本機保存，關視窗不會清。</p>
+            <div id="logs" class="log-list" role="log">尚無紀錄</div>
+          </section>
         </div>
       </div>
     </form>
