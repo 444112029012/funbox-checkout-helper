@@ -38,9 +38,9 @@ Chrome 擴充功能：在 [Funbox 官網](https://shop.funbox.com.tw/) 偵測商
 
 載入後點工具列圖示會出現設定視窗（約 760×640）。即時監看倒數在 Funbox 頁面右下角，不在這個視窗裡。
 
-<img src="docs/popup.png" width="520" alt="彈出視窗：網址、配送、紀錄" />
+<img src="docs/popup.png" width="720" alt="彈出視窗：網址、配送、紀錄" />
 
-<img src="docs/popup-settings.png" width="520" alt="配送、進入結帳與結帳動作" />
+<img src="docs/popup-settings.png" width="720" alt="配送、進入結帳與結帳動作" />
 
 - **儲存 / 開始執行 / 只進入商品頁**：設定只存在本機；開始執行才加車或監看；只進入商品頁只開網址、不加車。
 - **目標**：商品頁或分類頁網址。分類頁數量固定 1，且只加新上架／補貨。
