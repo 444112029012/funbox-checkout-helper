@@ -210,7 +210,7 @@ function renderLogs(logs) {
       const detail = entry.detail ? ` — ${escapeHtml(entry.detail)}` : "";
       const level = escapeHtml(entry.level || "info");
       const step = escapeHtml(entry.step || "");
-      return `<div class="log-row log-${level}"><div class="log-time">${t}</div><div class="log-step">[${level}] ${step}${detail}</div></div>`;
+      return `<article class="log-row log-${level}"><div class="log-meta"><time class="log-time">${t}</time><span class="log-level">${level}</span></div><p class="log-step">${step}${detail}</p></article>`;
     })
     .join("");
 }

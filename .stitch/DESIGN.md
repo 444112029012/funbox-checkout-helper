@@ -44,12 +44,13 @@ Functional only (not a second brand accent):
 
 ## 4. Component Stylings
 
-- **Buttons:** Flat. One primary (Harbor Navy, white text). Ghost/outline for Save and Open-page. Active: `scale(0.98)`. Hover: 6% darker fill, no outer glow. Min height 40px.
-- **Choice chips:** White + whisper border. Selected: 1px Harbor Navy + 8% navy tint. Disabled: 48% opacity, no pointer.
+- **Buttons:** Flat. Primary: Harbor Navy, white text. Save: Charcoal Ink, white text. Open-page: white fill, 1.5px Harbor outline, Harbor text; hover fills Harbor. Active: `scale(0.98)`. Min height 40px. Never transparent on zinc.
+- **Choice chips:** White + whisper border. Selected: 1px Harbor Navy + 8% navy tint. Disabled: 48% opacity, no pointer. Last shipping option spans both columns.
 - **Panels:** Softly rounded (12px), white fill, whisper border, no 2.5rem cards (too large at this density). Padding 10–12px.
 - **Inputs:** Label above. 8px radius. Focus: 2px Harbor ring, 2px offset. Error text below in Alert Rose.
 - **Status:** Quiet strip under header. Live watch row uses a pulsing 8px Harbor dot.
-- **Logs:** High-density list. Empty: centered Steel copy already written by JS (`尚無紀錄`). Error rows: rose tint, not neon.
+- **Logs:** Timeline rows, not stretched cards. Meta line = time + level. Body wraps below. No min-height flex grow (that stacked text). Empty: JS `尚無紀錄`. Error rows: rose tint.
+- **Page overlay (shop, bottom-right):** Dark twin of the popup. Charcoal Ink `#18181B`, 12px corners, same font. Title white / error rose / done mint. Countdown white, not amber. Stop = Alert Rose `#BE123C`. Add/checkout FABs = Harbor Navy. Keep EDGE 16 and stacking math.
 
 ## 5. Layout Principles
 
@@ -70,4 +71,4 @@ Functional only (not a second brand accent):
 - No emojis, Inter, pure black, neon glow, purple gradients.
 - No copy clichés (Elevate / Seamless / Unleash).
 - No fabricated metrics.
-- No changing `popup.js`, background, content, overlay placement, field `name`/`id`, or popup window size.
+- No changing background, content watch/add/checkout flow, overlay placement (`EDGE`/`GAP`), field `name`/`id`, or popup window size.

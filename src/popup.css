@@ -59,15 +59,6 @@ header {
   box-shadow: var(--shadow);
 }
 
-.eyebrow {
-  margin: 0 0 2px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--steel);
-}
-
 h1 {
   font-size: 18px;
   font-weight: 700;
@@ -265,20 +256,33 @@ button.primary {
   color: #fff;
 }
 
+button.ink {
+  background: var(--ink);
+  color: #fff;
+}
+
 button.ghost,
 button.secondary {
-  background: transparent;
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
 button:hover {
   background: var(--accent-hover);
+  color: #fff;
+}
+
+button.ink:hover {
+  background: #27272a;
+  color: #fff;
 }
 
 button.ghost:hover,
 button.secondary:hover {
-  background: var(--accent-soft);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
 }
 
 button:active {
@@ -306,6 +310,10 @@ button:active {
 .choice.grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+.choice.grid > label:last-child {
+  grid-column: 1 / -1;
 }
 
 .choice label {
@@ -342,10 +350,10 @@ button:active {
 }
 
 .log-list {
-  max-height: 220px;
+  max-height: 240px;
   overflow: auto;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   background: var(--canvas);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -354,7 +362,7 @@ button:active {
   color: var(--ink);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .log-list:not(:has(.log-row)) {
@@ -366,15 +374,21 @@ button:active {
 }
 
 .log-row {
-  min-height: 52px;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-height: 0;
+  isolation: isolate;
+}
+
+.log-meta {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .log-time {
@@ -383,13 +397,18 @@ button:active {
   font-size: 11px;
   line-height: 1.3;
   color: var(--steel);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
+}
+
+.log-level {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .log-step {
-  display: block;
-  flex: 1 1 auto;
+  margin: 0;
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;

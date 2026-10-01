@@ -5,6 +5,10 @@
   const EDGE = 16;
   const GAP = 8;
 
+  const FONT =
+    '"Segoe UI Variable", "Segoe UI", "Microsoft JhengHei UI", "Noto Sans TC", sans-serif';
+  const STYLE_ID = "funbox-helper-overlay-css";
+
   function overlayBox() {
     return {
       position: "fixed",
@@ -14,18 +18,33 @@
       bottom: `${EDGE}px`,
       left: "auto",
       maxWidth: "240px",
-      padding: "7px 10px",
-      borderRadius: "8px",
-      background: "rgba(17, 24, 39, 0.94)",
-      color: "#f9fafb",
-      font: "12px/1.35 system-ui, sans-serif",
-      boxShadow: "0 6px 16px rgba(0,0,0,.28)",
+      padding: "10px 12px",
+      borderRadius: "12px",
+      background: "#18181b",
+      color: "#f4f4f5",
+      font: `12px/1.45 ${FONT}`,
+      boxShadow: "0 12px 28px -18px rgba(24, 24, 27, 0.45)",
+      border: "1px solid rgba(255, 255, 255, 0.08)",
       display: "none",
       pointerEvents: "none",
     };
   }
 
+  function ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent =
+      `#funbox-helper-overlay [data-part="title"]{font-weight:700;letter-spacing:-0.02em}` +
+      `#funbox-helper-overlay [data-part="detail"]{margin-top:4px;color:#a1a1aa;white-space:pre-wrap}` +
+      `#funbox-helper-overlay [data-part="count"]{margin-top:8px;font-size:20px;font-weight:800;letter-spacing:0.02em;color:#f4f4f5}` +
+      `#funbox-helper-stop-watch-btn,#funbox-helper-checkout-btn,#funbox-helper-product-btn{border:0;border-radius:8px;padding:8px 12px;font:600 13px/1.1 ${FONT};color:#fff;cursor:pointer;transition:transform 120ms cubic-bezier(0.22,1,0.36,1)}` +
+      `#funbox-helper-stop-watch-btn:active,#funbox-helper-checkout-btn:active,#funbox-helper-product-btn:active{transform:scale(0.98)}`;
+    document.documentElement.appendChild(style);
+  }
+
   function ensure() {
+    ensureStyles();
     let el = document.getElementById(ID);
     if (el) return el;
     el = document.createElement("div");
@@ -33,9 +52,9 @@
     el.setAttribute("data-funbox-helper", "overlay");
     Object.assign(el.style, overlayBox());
     el.innerHTML =
-      '<div data-part="title" style="font-weight:700"></div>' +
-      '<div data-part="detail" style="margin-top:4px;color:#e5e7eb;white-space:pre-wrap;display:none"></div>' +
-      '<div data-part="count" style="margin-top:6px;font-size:20px;font-weight:800;letter-spacing:.04em;color:#fde68a;display:none"></div>';
+      '<div data-part="title"></div>' +
+      '<div data-part="detail" style="display:none"></div>' +
+      '<div data-part="count" style="display:none"></div>';
     document.documentElement.appendChild(el);
     return el;
   }
@@ -85,7 +104,7 @@
   let countdownMeta = { title: "", detail: "", tone: "" };
 
   function toneColor(tone) {
-    return tone === "error" ? "#fca5a5" : tone === "done" ? "#86efac" : "#93c5fd";
+    return tone === "error" ? "#fb7185" : tone === "done" ? "#6ee7b7" : "#f4f4f5";
   }
 
   function paint(title, detail, tone, countdownText) {
@@ -176,8 +195,8 @@
     btn.type = "button";
     btn.textContent = text;
     if (title) btn.title = title;
-    const bg = (colors && colors.background) || "#2563eb";
-    const shadow = (colors && colors.shadow) || "0 6px 18px rgba(37,99,235,.35)";
+    const bg = (colors && colors.background) || "#245c8f";
+    const shadow = (colors && colors.shadow) || "0 12px 28px -18px rgba(24, 24, 27, 0.45)";
     Object.assign(btn.style, {
       position: "fixed",
       zIndex: BTN_Z,
@@ -185,10 +204,10 @@
       bottom: `${EDGE}px`,
       padding: "8px 12px",
       border: "0",
-      borderRadius: "999px",
+      borderRadius: "8px",
       background: bg,
       color: "#fff",
-      font: "13px/1 system-ui, sans-serif",
+      font: `600 13px/1.1 ${FONT}`,
       cursor: "pointer",
       boxShadow: shadow,
     });
@@ -209,7 +228,7 @@
       "停止監看",
       onClick,
       "停止 API 偵測與每分鐘頁面重整。",
-      { background: "#dc2626", shadow: "0 6px 18px rgba(220,38,38,.35)" }
+      { background: "#be123c", shadow: "0 12px 28px -18px rgba(190, 18, 60, 0.45)" }
     );
   }
 
