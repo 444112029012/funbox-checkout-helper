@@ -1,5 +1,7 @@
 # Funbox 結帳助手
 
+<img src="icons/icon128.png" width="80" height="80" alt="Funbox 結帳助手圖示" />
+
 Chrome 擴充功能：在 [Funbox 官網](https://shop.funbox.com.tw/) 偵測商品、加入購物車、打開**真正的結帳頁**（`/carts/{token}`）並選配送／取貨方式。
 
 直接開 `/checkout` 常會看到「結帳功能已關閉」。做成擴充功能是因為 Funbox（Cyberbiz）購物車與結帳綁在瀏覽器登入 session。
