@@ -448,13 +448,23 @@
     const items = FunboxProduct.normalizeListing(data);
     const seen = items.map((row) => row.handle);
     const stockMap = FunboxProduct.listingStockMap(items);
+    const summary = FunboxProduct.listingWatchSummary(items);
     const label = `${target.listingType}/${target.listingPath}`;
-    await logStep("watch_listing", `${label} · 已記錄 ${seen.length} 件現有商品，只會加新上架或補貨有庫存的 1 件 · 每 ${sec} 秒 API 偵測，每 1 分鐘重整頁面以免登入過期`);
+    const named = summary.inStockHandles[0] ? `（${summary.inStockHandles[0]}）` : "";
+    await logStep(
+      "watch_listing",
+      `${label} · 已記錄 ${summary.total} 件（有現貨 ${summary.inStock}${named}、售完 ${summary.oos}、APP略過 ${summary.ignored}）。有現貨不自動加車，只會加新上架或補貨 1 件 · 每 ${sec} 秒 API 偵測，每 1 分鐘重整頁面以免登入過期`
+    );
+    const watchingMessage = !seen.length
+      ? "分類目前是空的，開始監看新上架。補貨靠 API 偵測；每 1 分鐘重整以免登入過期。"
+      : summary.inStock
+        ? `監看新上架中（有現貨 ${summary.inStock} 件已記錄、不自動加車）。補貨靠 API 偵測；每 1 分鐘重整以免登入過期。`
+        : `監看新上架中（目前 ${seen.length} 件，尚無有貨）。補貨靠 API 偵測；每 1 分鐘重整以免登入過期。`;
     await setJob({
       ...job,
       active: true,
       status: "watching",
-      message: seen.length ? `監看新上架中（目前 ${seen.length} 件）。補貨靠 API 偵測；每 1 分鐘重整以免登入過期。` : "分類目前是空的，開始監看新上架。補貨靠 API 偵測；每 1 分鐘重整以免登入過期。",
+      message: watchingMessage,
       updatedAt: Date.now(),
     });
     const nextJob = {
@@ -474,9 +484,10 @@
       productUrl: nextJob.productUrl,
       listingSeenHandles: seen,
       listingStockMap: stockMap,
+      listingItems: FunboxProduct.compactListingItems(items),
       tickCount: 0,
       title: "監看新上架",
-      lastDetail: `${label} · API 偵測中`,
+      lastDetail: FunboxProduct.formatListingWatchDetail(label, items, 0, sec),
       plannedReload: false,
     });
     showStopWatchButton();
@@ -613,7 +624,7 @@
         }
         watchTickCount += 1;
         const label = `${target.listingType}/${target.listingPath}`;
-        const detail = `${label} · 尚無可結帳庫存 · 已查 ${watchTickCount} 次 · 每 ${sec} 秒偵測，每 1 分鐘重整以免登入過期`;
+        const detail = FunboxProduct.formatListingWatchDetail(label, items, watchTickCount, sec);
         await logStep("watch_tick", detail);
         const nextAt = beginWatchCountdown(title, detail, sec);
         await setWatchState({
@@ -626,6 +637,7 @@
           intervalSec: sec,
           listingSeenHandles: items.map((row) => row.handle),
           listingStockMap: job.listingStockMap,
+          listingItems: FunboxProduct.compactListingItems(items),
         });
       } else {
         const handle = target.kind === "product" ? target.handle : FunboxProduct.parseHandle(job.productUrl || location.href);

@@ -23,12 +23,21 @@
 
 html {
   min-width: 760px;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
 }
 
 body {
   width: 760px;
+  max-width: 760px;
   max-height: 640px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: 0;
   padding: 14px 16px;
   background: var(--canvas);
@@ -80,6 +89,14 @@ header p,
   font-size: 12px;
   color: var(--steel);
   margin: 0;
+}
+
+.command,
+.catalog-fold,
+.cols {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .command {
@@ -154,11 +171,19 @@ form {
 .col {
   display: grid;
   gap: 10px;
+  min-width: 0;
+}
+
+.col > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .panel,
 .donate,
-.pii {
+.pii,
+.fold {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -174,12 +199,16 @@ form {
 label {
   display: grid;
   gap: 4px;
+  min-width: 0;
   font-size: 12px;
   color: var(--ink);
 }
 
-input,
+input:not([type="radio"], [type="checkbox"]),
 select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
@@ -216,6 +245,7 @@ select:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  min-width: 0;
 }
 
 .pii .row:has(> :nth-child(3)) {
@@ -223,7 +253,7 @@ select:disabled {
 }
 
 .row.triple {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 4.75rem 6.75rem minmax(0, 1fr);
 }
 
 .row.modes {
@@ -349,10 +379,97 @@ button:active {
   min-height: auto;
 }
 
+.catalog-fold {
+  margin-bottom: 10px;
+}
+
+.catalog-list {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-group.fold {
+  box-shadow: none;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.catalog-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  margin: 0 0 4px;
+  padding: 3px 8px 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+}
+
+.catalog-item:last-child {
+  margin-bottom: 0;
+}
+
+.catalog-copy {
+  min-width: 0;
+}
+
+.catalog-title {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.catalog-qty {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ok);
+  white-space: nowrap;
+}
+
+button.catalog-order {
+  min-height: 26px;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.catalog-item[data-kind="stock"] {
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+
+.catalog-item[data-kind="oos"],
+.catalog-item[data-kind="excluded"] {
+  grid-template-columns: 1fr;
+}
+
+.catalog-item[data-kind="oos"] {
+  box-shadow: inset 3px 0 0 var(--muted);
+}
+
+.catalog-item[data-kind="excluded"] {
+  box-shadow: inset 3px 0 0 var(--steel);
+  color: var(--steel);
+}
+
+.catalog-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .log-list {
   max-height: 240px;
+  min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   font-size: 12px;
   line-height: 1.45;
   background: var(--canvas);
@@ -362,6 +479,15 @@ button:active {
   margin: 0;
   color: var(--ink);
   display: block;
+}
+
+.log-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-list::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 8px;
 }
 
 .log-list:not(:has(.log-row)) {
@@ -468,10 +594,12 @@ header:has(details[open]) .disclaimer {
   color: var(--accent);
 }
 
+.fold,
 .pii {
   font-size: 13px;
 }
 
+.fold summary,
 .pii summary {
   font-weight: 600;
   list-style: none;
@@ -479,10 +607,12 @@ header:has(details[open]) .disclaimer {
   color: var(--ink);
 }
 
+.fold summary::-webkit-details-marker,
 .pii summary::-webkit-details-marker {
   display: none;
 }
 
+.fold summary::before,
 .pii summary::before {
   content: "";
   display: inline-block;
@@ -494,10 +624,12 @@ header:has(details[open]) .disclaimer {
   transform: rotate(-45deg) translateY(-1px);
 }
 
+.fold[open] summary::before,
 .pii[open] summary::before {
   transform: rotate(45deg) translateY(-2px);
 }
 
+.fold[open],
 .pii[open] {
   display: grid;
   gap: 8px;

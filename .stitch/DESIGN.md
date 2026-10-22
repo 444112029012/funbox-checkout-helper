@@ -49,7 +49,8 @@ Functional only (not a second brand accent):
 - **Panels:** Softly rounded (12px), white fill, whisper border, no 2.5rem cards (too large at this density). Padding 10–12px.
 - **Inputs:** Label above. 8px radius. Focus: 2px Harbor ring, 2px offset. Error text below in Alert Rose.
 - **Status:** Quiet strip under header. Live watch row uses a pulsing 8px Harbor dot.
-- **Logs:** Timeline rows, not stretched cards. Meta line = time + level. Body wraps below. No min-height flex grow (that stacked text). Empty: JS `尚無紀錄`. Error rows: rose tint.
+- **Logs:** Timeline rows, not stretched cards. Meta line = time + level. Body wraps below. No min-height flex grow (that stacked text). Empty: JS `尚無紀錄`. Error rows: rose tint. List `max-height: 240px`.
+- **Catalog:** Full-width fold under the command strip, right edge flush with 只進入商品頁. Same chevron as 個資. Nested folds: 現貨 (open) / 無庫存 / 排除. Title only — no handle/SKU. In-stock title is followed by mono 「庫存 N」 in moss. One-line rows (padding 3px, order button 26px). Compact Harbor 「加車結帳」. No inner scroller; body scrolls. Left inset: moss / muted / steel.
 - **Page overlay (shop, bottom-right):** Dark twin of the popup. Charcoal Ink `#18181B`, 12px corners, same font. Title white / error rose / done mint. Countdown white, not amber. Stop = Alert Rose `#BE123C`. Add/checkout FABs = Harbor Navy. Keep EDGE 16 and stacking math.
 
 ## 5. Layout Principles
@@ -57,7 +58,7 @@ Functional only (not a second brand accent):
 - **Window lock:** `html` min-width 760px, `body` width 760px, max-height 640px. Do not change the Chrome action popup size.
 - **Header:** Asymmetric 1fr / auto. Brand + icon left; disclaimer chip right. Open disclaimer spans full width.
 - **Command strip:** Status then actions. Primary CTA visually heavier (`1fr 1.7fr 1fr`), not three equal cards.
-- **Workspace:** CSS Grid `1.2fr 0.8fr`. Left: URL, shipping, checkout. Right: donate, PII, logs.
+- **Workspace:** Command, then full-width catalog fold, then CSS Grid `1.2fr 0.8fr`. Left: URL, shipping, checkout. Right: donate, PII, logs — same column width, `min-width: 0`, log scrollbar inside the card (`scrollbar-gutter: stable`).
 - **No overlapping.** No 3-equal feature cards. No centered hero.
 
 ## 6. Motion & Interaction
