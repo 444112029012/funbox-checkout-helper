@@ -39,6 +39,11 @@
         </div>
         <p class="hint" id="whereHint">即時狀態看頁面右下角。設定與個資只存在本機。</p>
       </div>
+      <details class="fold catalog-fold" id="catalogPanel" hidden open>
+        <summary id="catalogSummary">分類商品</summary>
+        <p class="hint" id="catalogHint">每 10 秒讀分類 API，不必等頁面重整。現貨可下單；分類監看仍不自動加現貨。</p>
+        <div id="catalog" class="catalog-list" role="region" aria-label="分類商品"></div>
+      </details>
       <div class="cols">
         <div class="col">
           <section class="panel">
@@ -46,7 +51,7 @@
             <label>商品或分類網址
               <input name="productUrl" placeholder="https://shop.funbox.com.tw/products/…" />
             </label>
-            <p class="hint">分類頁只加新上架 1 件。</p>
+            <p class="hint">分類頁不加重複現貨，只加新品或補貨 1 件。</p>
             <div class="row triple">
               <label>數量
                 <input name="quantity" type="number" min="1" value="1" />
@@ -104,7 +109,7 @@
             <h2>贊助開發</h2>
             <p id="donateLinks" class="donate-links">作者尚未放上贊助連結。</p>
           </section>
-          <details class="pii" id="piiFields">
+          <details class="fold pii" id="piiFields">
             <summary>個資（選填）</summary>
             <p class="hint">官網通常會帶入。沒帶入才用這裡補填，補填後請自行核對下單。只存在本機，不會上傳。</p>
             <div class="row">

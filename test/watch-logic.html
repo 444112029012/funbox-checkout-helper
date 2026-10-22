@@ -34,6 +34,34 @@
       if (!sold || sold.inStock !== false || sold.ignored) fail.push("sold item wrong");
       const map = FunboxProduct.listingStockMap(items);
       if (FunboxProduct.findPurchasable(items, map)) fail.push("would buy at start");
+      const liveLike = FunboxProduct.normalizeListing([
+        {
+          title: "BEYBLADE X 戰鬥陀螺 CX-19 鱷魚裂甲 隨機強化組",
+          url: "/products/bb08062",
+          variants: [{ inventory_quantity: 0, inventory_policy: "deny" }],
+        },
+        {
+          title: "BEYBLADE X 戰鬥陀螺 CX-16 極限衝擊對戰組C",
+          url: "/products/bb09728",
+          variants: [{ inventory_quantity: 110, inventory_policy: "deny" }],
+        },
+        listing[1],
+      ]);
+      const liveMap = FunboxProduct.listingStockMap(liveLike);
+      if (FunboxProduct.findPurchasable(liveLike, liveMap)) fail.push("would buy already-in-stock CX-16");
+      const liveSummary = FunboxProduct.listingWatchSummary(liveLike);
+      if (liveSummary.inStock !== 1 || liveSummary.ignored !== 1 || liveSummary.oos !== 1) {
+        fail.push("live summary counts");
+      }
+      const liveDetail = FunboxProduct.formatListingWatchDetail("categories/XI/KB", liveLike, 3, 10);
+      if (/尚無可結帳庫存/.test(liveDetail)) fail.push("misleading oos overlay");
+      if (!/有現貨 1 件（bb09728）已記錄、不自動加車/.test(liveDetail)) fail.push("overlay should name current stock");
+      const groups = FunboxProduct.groupListingItems(liveLike);
+      if (!groups.stock.some((row) => row.handle === "bb09728" && row.qty === 110)) fail.push("stock group missing CX-16 qty");
+      if (!groups.oos.some((row) => row.handle === "bb08062")) fail.push("oos group missing CX-19");
+      if (!groups.excluded.some((row) => row.handle === "bbpr08914")) fail.push("excluded group missing APP");
+      const emptyDetail = FunboxProduct.formatListingWatchDetail("categories/XI/KB", items, 1, 10);
+      if (!/目前沒有可結帳庫存/.test(emptyDetail)) fail.push("true oos copy");
       const restock = FunboxProduct.normalizeListing([
         { ...listing[0], variants: [{ inventory_quantity: 4, inventory_policy: "deny" }] },
         listing[1],

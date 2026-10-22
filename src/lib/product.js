@@ -133,6 +133,7 @@
           variants,
           inStock,
           ignored,
+          qty: listingInventoryQty(variants, ignored),
         };
       })
       .filter((row) => row.handle);
@@ -147,6 +148,20 @@
     return String(handle || "").toLowerCase();
   }
 
+  function listingInventoryQty(variants, ignored) {
+    if (ignored) return 0;
+    const list = variants || [];
+    let total = 0;
+    let hasQty = false;
+    for (const variant of list) {
+      const n = Number(variant && variant.inventory_quantity);
+      if (!Number.isFinite(n)) continue;
+      hasQty = true;
+      if (isVariantInStock(variant)) total += Math.max(0, n);
+    }
+    return hasQty ? total : null;
+  }
+
   function listingStockMap(items) {
     const map = {};
     for (const row of items || []) {
@@ -159,6 +174,55 @@
   function findPurchasable(items, stockMap) {
     const map = stockMap || {};
     return (items || []).find((row) => row.handle && !row.ignored && row.inStock && map[stockKey(row.handle)] !== true) || null;
+  }
+
+  function listingWatchSummary(items) {
+    const summary = { total: 0, inStock: 0, oos: 0, ignored: 0, inStockHandles: [] };
+    for (const row of items || []) {
+      summary.total += 1;
+      if (row.ignored) {
+        summary.ignored += 1;
+      } else if (row.inStock) {
+        summary.inStock += 1;
+        summary.inStockHandles.push(row.handle);
+      } else {
+        summary.oos += 1;
+      }
+    }
+    return summary;
+  }
+
+  function formatListingWatchDetail(label, items, tickCount, sec) {
+    const s = listingWatchSummary(items);
+    const named = s.inStockHandles[0] ? `（${s.inStockHandles[0]}）` : "";
+    const stockBit = s.inStock
+      ? `有現貨 ${s.inStock} 件${named}已記錄、不自動加車`
+      : "目前沒有可結帳庫存";
+    return `${label} · ${stockBit} · 等待新品或補貨 · 已查 ${tickCount} 次 · 每 ${sec} 秒偵測，每 1 分鐘重整以免登入過期`;
+  }
+
+  function compactListingItems(items) {
+    return (items || [])
+      .filter((row) => row && row.handle)
+      .map((row) => ({
+        handle: row.handle,
+        title: row.title || row.handle,
+        inStock: Boolean(row.inStock),
+        ignored: Boolean(row.ignored),
+        qty: Number.isFinite(Number(row.qty)) ? Number(row.qty) : listingInventoryQty(row.variants, row.ignored),
+      }));
+  }
+
+  function groupListingItems(items) {
+    const stock = [];
+    const oos = [];
+    const excluded = [];
+    for (const row of compactListingItems(items)) {
+      if (row.ignored) excluded.push(row);
+      else if (row.inStock) stock.push(row);
+      else oos.push(row);
+    }
+    return { stock, oos, excluded };
   }
 
   function markListingOutOfStock(stockMap, handle) {
@@ -250,6 +314,11 @@
     findNewInStock,
     listingStockMap,
     findPurchasable,
+    listingWatchSummary,
+    formatListingWatchDetail,
+    listingInventoryQty,
+    compactListingItems,
+    groupListingItems,
     markListingOutOfStock,
     mergeListingStock,
     handleFromListingItem,
